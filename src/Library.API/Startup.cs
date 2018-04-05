@@ -13,6 +13,7 @@ using Library.API.Entities;
 using Library.API.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Formatters;
+using Microsoft.AspNetCore.Diagnostics;
 
 namespace Library.API
 {
@@ -49,7 +50,10 @@ namespace Library.API
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, 
             ILoggerFactory loggerFactory, LibraryContext libraryContext)
-        {           
+        {
+            loggerFactory.AddConsole();
+            loggerFactory.AddDebug(LogLevel.Information);
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -60,6 +64,14 @@ namespace Library.API
                 {
                     appBuilder.Run(async context =>
                     {
+                        var exceptionalHandlerFeature = context.Features.Get<IExceptionHandlerFeature>();
+                        if (exceptionalHandlerFeature != null)
+                        {
+                            var logger = loggerFactory.CreateLogger("Global exception logger");
+                            logger.LogError(500,
+                                exceptionalHandlerFeature.Error,
+                                exceptionalHandlerFeature.Error.Message);
+                        }
                         context.Response.StatusCode = 500;
                         await context.Response.WriteAsync("An unexpected error occured");
                     });
